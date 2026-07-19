@@ -10,6 +10,42 @@ import requests
 BASE = "https://chat.sakana.ai"
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0"
 
+ENV_FILE = os.environ.get(
+    "SAKANA_ENV_FILE",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"),
+)
+
+
+def _load_dotenv(path=ENV_FILE):
+    """Populate os.environ from a local .env (existing vars win)."""
+    try:
+        with open(path) as f:
+            lines = f.readlines()
+    except OSError:
+        return
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, val = line.partition("=")
+        key, val = key.strip(), val.strip().strip("'\"")
+        if key and key not in os.environ:
+            os.environ[key] = val
+
+
+def _write_dotenv(cf, chat, path=ENV_FILE):
+    """Persist the resolved tokens as env vars for future runs / other tools."""
+    try:
+        with open(path, "w") as f:
+            f.write(f"SAKANA_CF_CLEARANCE={cf}\nSAKANA_CHAT={chat}\n")
+        os.environ["SAKANA_CF_CLEARANCE"] = cf
+        os.environ["SAKANA_CHAT"] = chat
+    except OSError:
+        pass
+
+
+_load_dotenv()
+
 CF_CLEARANCE = os.environ.get("SAKANA_CF_CLEARANCE", "")
 SAKANA_CHAT = os.environ.get("SAKANA_CHAT", "")
 
@@ -166,6 +202,7 @@ def resolve_credentials(auto_mint=True):
 
     saved = sakana_session.load_session()
     if saved:
+        _write_dotenv(saved["cf_clearance"], saved["sakana_chat"])
         return saved["cf_clearance"], saved["sakana_chat"]
 
     if not auto_mint:
@@ -173,6 +210,7 @@ def resolve_credentials(auto_mint=True):
 
     print("No session found; minting a fresh guest session...", file=sys.stderr)
     data = sakana_session.refresh_session()
+    _write_dotenv(data["cf_clearance"], data["sakana_chat"])
     return data["cf_clearance"], data["sakana_chat"]
 
 

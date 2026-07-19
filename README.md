@@ -29,8 +29,14 @@ python3 sakana_server.py
 `sakana.py` resolves credentials in this order, minting on demand:
 
 1. `SAKANA_CF_CLEARANCE` / `SAKANA_CHAT` environment variables, if set.
-2. A cached session in `sakana_session.json`.
-3. A freshly minted guest session (headless browser via Playwright).
+2. A local `.env` file (auto-loaded on import).
+3. A cached session in `sakana_session.json`.
+4. A freshly minted guest session (headless browser via Playwright).
+
+Once resolved, the tokens are written back to `.env` as
+`SAKANA_CF_CLEARANCE` / `SAKANA_CHAT`, so they are available as environment
+variables to later runs and any other tooling — no manual `export` needed.
+`.env` is gitignored and never committed.
 
 The server keeps a rotating pool of guest sessions (`SAKANA_POOL_SIZE`, default
 3), marks any that hit the guest quota as exhausted, and replenishes the pool

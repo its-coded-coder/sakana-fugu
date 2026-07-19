@@ -13,6 +13,7 @@ server.out
 # Local session state and credentials (contain live tokens/cookies)
 sakana_session.json
 sakana_pool.json
+.env
 
 
 # Editor/OS
