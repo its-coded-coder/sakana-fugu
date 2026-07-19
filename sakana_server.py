@@ -149,8 +149,16 @@ def init_pool():
     else:
         cf = os.environ.get("SAKANA_CF_CLEARANCE", CF_CLEARANCE)
         chat = os.environ.get("SAKANA_CHAT", SAKANA_CHAT)
-        pool.add(cf, chat)
-        print("[pool] seeded with baked-in session", flush=True)
+        if cf and chat:
+            pool.add(cf, chat)
+            print("[pool] seeded from environment", flush=True)
+        else:
+            print("[pool] no session found; minting one inline...", flush=True)
+            if pool.mint_one_blocking() is None:
+                raise SystemExit(
+                    "could not mint an initial session "
+                    "(is Playwright installed? run: playwright install chromium)"
+                )
     pool.replenish()
 
 

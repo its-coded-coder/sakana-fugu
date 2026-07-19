@@ -149,11 +149,38 @@ class SakanaClient:
         }
 
 
-def main():
+def resolve_credentials(auto_mint=True):
+    """Return (cf_clearance, sakana_chat), fetching them automatically.
+
+    Resolution order, so a fresh clone runs with zero configuration:
+      1. SAKANA_CF_CLEARANCE / SAKANA_CHAT environment variables.
+      2. A previously persisted guest session (sakana_session.json).
+      3. A freshly minted guest session (headless browser), if auto_mint.
+    """
     cf = os.environ.get("SAKANA_CF_CLEARANCE", CF_CLEARANCE)
     chat = os.environ.get("SAKANA_CHAT", SAKANA_CHAT)
-    if not cf or not chat:
-        sys.exit("Set SAKANA_CF_CLEARANCE and SAKANA_CHAT env vars")
+    if cf and chat:
+        return cf, chat
+
+    import sakana_session
+
+    saved = sakana_session.load_session()
+    if saved:
+        return saved["cf_clearance"], saved["sakana_chat"]
+
+    if not auto_mint:
+        raise RuntimeError("no credentials and auto_mint disabled")
+
+    print("No session found; minting a fresh guest session...", file=sys.stderr)
+    data = sakana_session.refresh_session()
+    return data["cf_clearance"], data["sakana_chat"]
+
+
+def main():
+    try:
+        cf, chat = resolve_credentials()
+    except Exception as e:
+        sys.exit(f"Could not obtain a session: {e}")
 
     prompt = " ".join(sys.argv[1:]) or "hi"
     client = SakanaClient(cf, chat)
